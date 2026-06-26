@@ -1,0 +1,55 @@
+[project]
+name = "unit-t-udp1306c"
+version = "0.1.0"
+description = "Cross-platform GUI for controlling the UNI-T UDP1306C lab DC power supply over USB"
+authors = [
+    {name = "Maksym Lychman", email = "lichmanmaksim@gmail.com"},
+]
+dependencies = [
+    "pyserial>=3.5",
+    "matplotlib>=3.11.0",
+]
+requires-python = ">=3.13"
+license = {text = "MIT"}
+
+[tool.pdm]
+distribution = false
+
+[tool.pdm.scripts]
+gui    = "python main.py"
+bdd    = "behave"
+unit   = {shell = "coverage run -m unittest discover -s tests/unit -v && coverage report -m && coverage html"}
+format = "black ."
+check  = {shell = "black --check . && ruff check ."}
+lint   = "ruff check ."
+
+[dependency-groups]
+dev = [
+    "behave>=1.2.6",
+    "coverage>=7.0",
+    "black>=24.0",
+    "ruff>=0.4",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+
+[tool.ruff]
+line-length = 88
+preview = true
+
+[tool.ruff.lint]
+select = ["F401", "F811", "F841", "E261", "E262", "E265"]
+
+[tool.coverage.run]
+source = ["."]
+omit   = ["tests/*", "main.py", "gui/*", ".venv/*"]
+
+[tool.coverage.report]
+show_missing  = true
+exclude_lines = ["pragma: no cover", "if __name__ == .__main__"]
+
+[tool.coverage.html]
+directory = "htmlcov"
+title     = "UDP1306C coverage"

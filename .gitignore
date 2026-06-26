@@ -1,0 +1,37 @@
+# Python
+*.py[codz]
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# PDM
+.pdm-python
+.pdm-build/
+.venv/
+
+# Caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Environment
+.env
+.envrc
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Coverage
+.coverage
+htmlcov/
+
+# Manuals (binary files, not for VCS)
+manual/
