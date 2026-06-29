@@ -14,10 +14,21 @@ def find_port() -> str | None:
     for p in serial.tools.list_ports.comports():
         desc = (p.description or "").lower()
         mfr = (p.manufacturer or "").lower()
+        dev = p.device.lower()
+
+        # Explicit UNI-T match — works on all platforms if driver reports correctly
         if any(k in desc or k in mfr for k in ("uni-t", "uni_t", "udp")):
             return p.device
-        if "usbmodem" in p.device or "ttyacm" in p.device.lower():
+        # macOS: /dev/cu.usbmodem*
+        if "usbmodem" in dev:
             return p.device
+        # Linux: /dev/ttyACM* (USB CDC class)
+        if "ttyacm" in dev:
+            return p.device
+        # Windows: COMx with USB CDC descriptor
+        if dev.startswith("com") and "cdc" in desc:
+            return p.device
+
     return None
 
 

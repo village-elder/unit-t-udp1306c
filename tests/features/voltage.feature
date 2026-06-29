@@ -7,6 +7,7 @@ Feature: Voltage setpoint control
 
   Scenario Outline: Set output voltage
     When I set voltage to <volts> V
+    And I wait 1 seconds
     Then the voltage setpoint reads <volts> V within 0.05
 
     Examples:

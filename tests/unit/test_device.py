@@ -245,6 +245,16 @@ class TestFindPort(unittest.TestCase):
         with patch("device.serial.tools.list_ports.comports", return_value=[port]):
             self.assertEqual(dev_module.find_port(), "/dev/cu.usbmodem1234")
 
+    def test_matches_ttyacm_device(self):
+        port = self._fake_port("/dev/ttyACM0", description="USB Serial")
+        with patch("device.serial.tools.list_ports.comports", return_value=[port]):
+            self.assertEqual(dev_module.find_port(), "/dev/ttyACM0")
+
+    def test_matches_windows_com_cdc(self):
+        port = self._fake_port("COM3", description="USB CDC Serial")
+        with patch("device.serial.tools.list_ports.comports", return_value=[port]):
+            self.assertEqual(dev_module.find_port(), "COM3")
+
     def test_returns_none_when_no_match(self):
         port = self._fake_port("/dev/ttyUSB1", description="Prolific Serial")
         with patch("device.serial.tools.list_ports.comports", return_value=[port]):

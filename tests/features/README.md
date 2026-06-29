@@ -394,6 +394,11 @@ When   I load memory slot {N}                     # те саме, alias
 When   I restore memory slot {N}                  # те саме, alias
 ```
 
+**Пауза**
+```gherkin
+When   I wait {N} seconds                         # пауза N секунд (для стабілізації або витримки)
+```
+
 ---
 
 ### Приклад тесту

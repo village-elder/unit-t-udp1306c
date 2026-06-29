@@ -88,6 +88,8 @@ class MemCtrlPanel(ttk.Frame):
         self._out_btn = tk.Button(self, text="OUTPUT", command=on_output_toggle)
         self._out_btn.grid(row=4, column=1, padx=4, pady=2, sticky="ew")
 
+        self._btn_bg = self._ovp_btn.cget("bg")
+
     def _fire_ovp(self) -> None:
         self._dbc("ovp", lambda: self._on_ovp_val(round(self._ovp_val.get(), 2)))
 
@@ -95,9 +97,9 @@ class MemCtrlPanel(ttk.Frame):
         self._dbc("ocp", lambda: self._on_ocp_val(round(self._ocp_val.get(), 3)))
 
     def set_states(self, *, ovp: bool, ocp: bool, output: bool) -> None:
-        self._ovp_btn.config(bg=C_GRN if ovp else "SystemButtonFace")
-        self._ocp_btn.config(bg=C_GRN if ocp else "SystemButtonFace")
-        self._out_btn.config(bg=C_GRN if output else "SystemButtonFace")
+        self._ovp_btn.config(bg=C_GRN if ovp else self._btn_bg)
+        self._ocp_btn.config(bg=C_GRN if ocp else self._btn_bg)
+        self._out_btn.config(bg=C_GRN if output else self._btn_bg)
 
     def set_ovp_val(self, v: float) -> None:
         self._ovp_val.set(round(v, 2))

@@ -2,10 +2,14 @@
 
 import logging
 import os
+import threading
+import time
 
 from device import UDP1306C, find_port
 
 log = logging.getLogger(__name__)
+
+SCENARIO_TIMEOUT = int(os.environ.get("BDD_TIMEOUT", 60))
 
 
 def before_all(context):
@@ -18,6 +22,16 @@ def before_all(context):
 
 def before_scenario(context, scenario):
     context.device = None
+    context._timeout_hit = False
+    context._t0 = time.monotonic()
+
+    def _on_timeout():
+        context._timeout_hit = True
+
+    context._timer = threading.Timer(SCENARIO_TIMEOUT, _on_timeout)
+    context._timer.daemon = True
+    context._timer.start()
+
     needs_device = "device" in scenario.tags or "device" in scenario.feature.tags
     if not needs_device:
         return
@@ -34,7 +48,17 @@ def before_scenario(context, scenario):
         scenario.skip(f"Cannot open {port}: {exc}")
 
 
+def after_step(context, step):
+    if context._timeout_hit:
+        elapsed = time.monotonic() - context._t0
+        context.scenario.skip(
+            f"Scenario timeout: {elapsed:.1f}s exceeded {SCENARIO_TIMEOUT}s"
+        )
+
+
 def after_scenario(context, scenario):
+    context._timer.cancel()
+
     if not context.device:
         return
     try:

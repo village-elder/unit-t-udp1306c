@@ -7,6 +7,7 @@ Feature: Current limit control
 
   Scenario Outline: Set current limit
     When I set current to <amps> A
+    And I wait 1 seconds
     Then the current setpoint reads <amps> A within 0.01
 
     Examples:

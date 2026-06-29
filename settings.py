@@ -3,11 +3,22 @@
 import dataclasses
 import json
 import logging
+import os
+import sys
 from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-_PATH = Path.home() / ".config" / "udp1306c" / "settings.json"
+
+def _config_path() -> Path:
+    if sys.platform == "win32":
+        base = Path(os.getenv("APPDATA", Path.home()))
+    else:
+        base = Path.home() / ".config"
+    return base / "udp1306c" / "settings.json"
+
+
+_PATH = _config_path()
 
 
 @dataclasses.dataclass

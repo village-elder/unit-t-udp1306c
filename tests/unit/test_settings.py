@@ -5,7 +5,25 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import settings as settings_module
 from settings import AppSettings
+
+
+class TestConfigPath(unittest.TestCase):
+    def test_unix_path_uses_home_config(self):
+        with patch("settings.sys.platform", "linux"):
+            p = settings_module._config_path()
+        self.assertIn(".config", p.parts)
+        self.assertTrue(str(p).endswith("udp1306c/settings.json"))
+
+    def test_windows_path_uses_appdata(self):
+        with (
+            patch("settings.sys.platform", "win32"),
+            patch("settings.os.getenv", return_value="/mock/AppData"),
+        ):
+            p = settings_module._config_path()
+        self.assertIn("AppData", str(p))
+        self.assertIn("udp1306c", str(p))
 
 
 class TestAppSettingsDefaults(unittest.TestCase):

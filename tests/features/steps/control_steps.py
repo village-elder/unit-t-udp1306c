@@ -41,6 +41,9 @@ Available steps (Given / When / Then / And):
     When        I recall memory slot {N}
     When        I load memory slot {N}               ← alias
     When        I restore memory slot {N}            ← alias
+
+  TIMING
+    When        I wait {N} seconds
 """
 
 import time
@@ -207,6 +210,14 @@ def step_assert_current_approx(context, expected):
     assert (
         abs(a - expected) <= 0.05
     ), f"Measured current: expected ~{expected} A, got {a:.4f} A"
+
+
+# ── timing ────────────────────────────────────────────────────────────────────
+
+
+@step("I wait {seconds:d} seconds")
+def step_wait(context, seconds):
+    time.sleep(seconds)
 
 
 # ── memory slots ──────────────────────────────────────────────────────────────
