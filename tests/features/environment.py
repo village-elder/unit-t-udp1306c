@@ -1,4 +1,10 @@
-"""Behave hooks: connect/disconnect device around each @device scenario."""
+"""Behave hooks: connect/disconnect device around each @device scenario.
+
+Tags:
+  @device            — scenario/feature needs a physical device
+  @continuous_output — device is connected once per feature, output stays ON
+                       between scenarios (useful for sweep/simulation tests)
+"""
 
 import logging
 import os
@@ -20,8 +26,41 @@ def before_all(context):
     )
 
 
-def before_scenario(context, scenario):
+def before_feature(context, feature):
+    if "continuous_output" not in feature.tags:
+        return
+
+    port = os.environ.get("UDP1306C_PORT") or find_port()
+    if not port:
+        context._continuous_error = (
+            "No device found. Set UDP1306C_PORT or connect the PSU."
+        )
+        return
+
+    try:
+        context.device = UDP1306C(port)
+        context.device.output(True)
+        context._continuous_error = None
+        log.info("Connected [continuous output] on %s for: %s", port, feature.name)
+    except Exception as exc:
+        context._continuous_error = str(exc)
+        context.device = None
+
+
+def after_feature(context, feature):
+    if "continuous_output" not in feature.tags:
+        return
+    if not getattr(context, "device", None):
+        return
+    try:
+        context.device.output(False)
+    except Exception:
+        log.warning("Could not turn off output after feature", exc_info=True)
+    context.device.close()
     context.device = None
+
+
+def before_scenario(context, scenario):
     context._timeout_hit = False
     context._t0 = time.monotonic()
 
@@ -32,6 +71,14 @@ def before_scenario(context, scenario):
     context._timer.daemon = True
     context._timer.start()
 
+    # Device managed at feature level — just check for connection errors
+    if "continuous_output" in scenario.feature.tags:
+        error = getattr(context, "_continuous_error", None)
+        if error:
+            scenario.skip(error)
+        return
+
+    context.device = None
     needs_device = "device" in scenario.tags or "device" in scenario.feature.tags
     if not needs_device:
         return
@@ -58,6 +105,10 @@ def after_step(context, step):
 
 def after_scenario(context, scenario):
     context._timer.cancel()
+
+    # Output stays ON between scenarios — cleanup happens in after_feature
+    if "continuous_output" in scenario.feature.tags:
+        return
 
     if not context.device:
         return

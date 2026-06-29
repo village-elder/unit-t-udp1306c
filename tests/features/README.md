@@ -9,16 +9,17 @@ Acceptance-тести перевіряють поведінку реальног
 
 ```
 tests/features/
-├── environment.py          # Хуки before/after scenario: відкрити/закрити USB-порт
+├── environment.py          # Хуки before/after scenario та feature: відкрити/закрити USB-порт
 ├── connection.feature      # IDN, версія прошивки
 ├── voltage.feature         # Задання напруги (0–32 V)
 ├── current.feature         # Задання струму (0–6 A)
 ├── output.feature          # Увімкнення/вимкнення виходу
 ├── protection.feature      # OVP та OCP (enable/disable + threshold)
 ├── memory.feature          # Збереження та відновлення пресетів M1–M5
+├── battery_AAA.feature    # Симуляція рівнів заряду батареї AAA (безшовний sweep)
 └── steps/
     ├── connection_steps.py # IDN, version
-    ├── control_steps.py    # voltage, current, output, memory
+    ├── control_steps.py    # voltage, current, output, memory, wait
     └── protection_steps.py # OVP, OCP
 ```
 
@@ -51,8 +52,9 @@ UDP1306C_PORT=/dev/cu.usbmodem1401 pdm run bdd
 ### Фільтрація за тегом
 
 ```bash
-pdm run bdd --tags @device        # тільки тести з пристроєм (всі)
-pdm run bdd --tags ~@device       # пропустити тести з пристроєм
+pdm run bdd --tags @device             # тільки тести з пристроєм (всі)
+pdm run bdd --tags ~@device            # пропустити тести з пристроєм
+pdm run bdd --tags @continuous_output  # тільки sweep-тести (безперервний вихід)
 ```
 
 ### Dry-run (перевірити кроки без запуску)
@@ -81,6 +83,44 @@ python -c "from device import find_port; print(find_port())"
 2. Якщо порт не знайдено → `scenario.skip(...)` — сценарій пропускається, **не падає**
 3. Якщо порт знайдено, але порт не відповідає → `scenario.skip(...)`
 4. Після кожного сценарію — `output(False)` (безпека) + `device.close()`
+
+## Тег `@continuous_output` — безперервний вихід між сценаріями
+
+Звичайний `@device` вмикає/вимикає вихід і перепідключається для кожного сценарію окремо. Це не підходить для тестів, де важливий **безперервний sweep** (наприклад, симуляція рівнів заряду батареї).
+
+Тег `@continuous_output` змінює поведінку хуків:
+
+| Подія | `@device` | `@continuous_output` |
+|-------|-----------|----------------------|
+| `before_feature` | — | підключається, вмикає `output(True)` |
+| `before_scenario` | підключається | перевіряє помилку підключення |
+| `after_scenario` | `output(False)` + `close()` | нічого (вихід залишається ON) |
+| `after_feature` | — | `output(False)` + `close()` |
+
+```gherkin
+@continuous_output
+Feature: AAA battery charge level simulation
+
+  Background:
+    Given the power supply is connected
+    And I set current to 0.500 A
+
+  Scenario Outline: Battery icon at <percent>% charge (<volts> V)
+    When I set voltage to <volts> V
+    And I wait 5 seconds
+    Then the status shows output is ON
+
+    Examples: AAA alkaline charge levels (0.90–1.65 V)
+      | percent | volts |
+      |     100 |  1.65 |
+      |      80 |  1.50 |
+      |      60 |  1.35 |
+      |      40 |  1.20 |
+      |      20 |  1.05 |
+      |       0 |  0.90 |
+```
+
+> **Background** виконується перед кожним рядком `Examples`, але оскільки пристрій вже підключений, `Given the power supply is connected` — це легка перевірка, а не переналаштування. Повного перезапуску немає.
 
 ## Features та сценарії
 
@@ -148,11 +188,23 @@ Scenario Outline: Save and recall a preset
   Then the voltage setpoint reads 10.00 V within 0.05
 ```
 
+### battery_AAA.feature
+
+Симулює рівні заряду батареї AAA (1.5V alkaline) — від 100% (1.65V) до 0% (0.90V).  
+Вихід **не вимикається** між сценаріями завдяки тегу `@continuous_output`.
+
+```gherkin
+Scenario Outline: Battery icon at <percent>% charge (<volts> V)
+  When I set voltage to <volts> V
+  And I wait 5 seconds
+  Then the status shows output is ON
+```
+
 ## Безпека
 
-- Вихід завжди вимикається (`output(False)`) після кожного сценарію у `after_scenario`
-- Тести задають напругу та струм **тільки на спінбоксах**, вихід вмикається явно лише у `output.feature`
-- Перед запуском переконайтесь, що до виходу нічого не підключено
+- Вихід завжди вимикається (`output(False)`) після кожного сценарію у `after_scenario` (`@device`) або після всього feature у `after_feature` (`@continuous_output`)
+- Тести задають напругу та струм **тільки на спінбоксах**, вихід вмикається явно лише у `output.feature` та `@continuous_output`-features
+- Перед запуском переконайтесь, що навантаження підключене відповідно до тесту (або відсутнє)
 
 ## Приклад виводу
 
@@ -294,7 +346,7 @@ pdm run bdd --tags ~@slow                      # виключити @slow
 pdm run bdd --tags "@device and not @slow"     # комбінація
 ```
 
-Усі поточні feature-файли вже мають тег `@device` — без підключеного пристрою вони автоматично пропускаються (`SKIP`).
+Усі поточні feature-файли мають тег `@device` або `@continuous_output` — без підключеного пристрою вони автоматично пропускаються (`SKIP`).
 
 ---
 
